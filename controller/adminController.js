@@ -22,17 +22,21 @@ exports.getUsers = async (req, res) => {
 };
 
 // Block/Unblock a user
-exports.toggleBlockUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+exports.blockUser = async (req, res) => {
+  const { id } = req.params;
+  const { block } = req.body;
 
-    user.blocked = !user.blocked;
-    await user.save();
-    res.status(200).json({ message: `User ${user.blocked ? "Blocked" : "Unblocked"}` });
-  } catch (error) {
-    res.status(500).json({ message: "Error updating user status", error });
-  }
+  const user = await User.findById(id);
+  if (!user) throw new NotFoundError("User not found");
+
+  user.blocked = block;
+  await user.save();
+
+  res.json({ 
+    success: true, 
+    message: `User ${block ? "blocked" : "unblocked"}`,
+    data: { userId: id, blocked: user.blocked }
+  });
 };
 
 // Get all donations
@@ -60,3 +64,29 @@ exports.updateDonationStatus = async (req, res) => {
     res.status(500).json({ message: "Error updating donation status", error });
   }
 };
+
+
+// // Approve/reject donation
+// exports.updateDonationStatus = async (req, res) => {
+//   const { id } = req.params;
+//   const { status } = req.body;
+
+//   if (!["Approved", "Rejected"].includes(status)) {
+//     throw new BadRequestError("Invalid status value");
+//   }
+
+//   const donation = await Donation.findById(id)
+//     .populate("donor", "name email")
+//     .populate("ngo", "name");
+
+//   if (!donation) throw new NotFoundError("Donation not found");
+
+//   donation.status = status;
+//   await donation.save();
+
+//   res.json({ 
+//     success: true, 
+//     message: `Donation ${status.toLowerCase()}`,
+//     data: donation 
+//   });
+// };
