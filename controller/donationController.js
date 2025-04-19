@@ -45,12 +45,15 @@ exports.createDonation = async (req, res) => {
 exports.updateDonationStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    if(!["Pending", "Approved", "Rejected"].includes(status)){
+      return res.status(400).json({message:"Invalid status value"})
+    }
     const donation = await Donation.findById(req.params.id);
     if (!donation) return res.status(404).json({ message: "Donation not found" });
 
     donation.status = status;
     await donation.save();
-    res.status(200).json({ message: `Donation ${status}` });
+    res.status(200).json({ message: `Donation status updated to ${status}`, donation });
   } catch (error) {
     res.status(500).json({ message: "Error updating donation status", error });
   }
