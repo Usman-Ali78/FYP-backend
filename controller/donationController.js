@@ -25,12 +25,19 @@ exports.getDonationById = async (req, res) => {
 // Create a new donation
 exports.createDonation = async (req, res) => {
   try {
-    const { donorName, item } = req.body;
-    const donation = new Donation({ donorName, item });
+    const { donor, item, quantity } = req.body;
+    if (!donor || !item || quantity == null) {
+      return res.status(400).json({ message: "Donor, item, and quantity are required" });
+    }
+    
+    if (typeof quantity !== 'number' || quantity <= 0) {
+      return res.status(400).json({ message: "Quantity must be a positive number" });
+    }
+    const donation = new Donation({ donor, item, quantity });
     await donation.save();
     res.status(201).json(donation);
   } catch (error) {
-    res.status(500).json({ message: "Error creating donation", error });
+    res.status(500).json({ message: "Error creating donation", error: error.message });
   }
 };
 
