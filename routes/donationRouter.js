@@ -1,19 +1,3 @@
-// const express = require("express");
-// const donationRouter = express.Router();
-// const donationController = require("../controller/donationController");
-// const authMiddleware = require("../middleware/authMiddleware")
-
-// //protrect routes
-// donationRouter.use(authMiddleware)
-
-// donationRouter.get("/", donationController.getAllDonations);
-// donationRouter.get("/:id", donationController.getDonationById);
-// donationRouter.post("/", donationController.createDonation);
-// donationRouter.put("/:id/status", donationController.updateDonationStatus);
-// donationRouter.delete("/:id", donationController.deleteDonation);
-
-// module.exports = donationRouter;
-
 const express = require("express");
 const donationRouter = express.Router();
 const donationController = require("../controller/donationController");
