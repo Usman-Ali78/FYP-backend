@@ -5,7 +5,7 @@ const { restaurantRouter } = require("./routes/restaurantRouter");
 const { mongoConnect } = require("./Database/database");
 const { authRouter } = require("./routes/authRouter");
 const { adminRouter } = require("./routes/adminRouter");
-const donationRouter = require("./routes/donationRouter");
+const {donationRouter} = require("./routes/donationRouter");
 const userRouter = require("./routes/userRouter");
 
 const app = express();
