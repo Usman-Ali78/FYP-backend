@@ -23,14 +23,14 @@ donationRouter.post(
 // NGO: Claim a donation
 donationRouter.put(
   "/:id/claim",
-  roleMiddleware(["NGO"]),
+  roleMiddleware(["ngo"]),
   donationController.claimDonation
 );
 
 // Admin: Update donation status (Approve/Reject/Deliver)
 donationRouter.put(
   "/:id/status",
-  roleMiddleware(["Admin"]),
+  roleMiddleware(["admin"]),
   donationController.updateDonationStatus
 );
 

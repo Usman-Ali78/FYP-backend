@@ -90,32 +90,39 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    //validate
+    // Validate
     if (!email || !password) {
-      return res.status(400).json({ message: "email and password required" });
+      return res.status(400).json({ message: "Email and password required" });
     }
 
-    //check if user exists
+    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ messagge: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    //compare passwords
+    // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "invalid credentials" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, userType: user.userType },
-      process.env.JWT_SECRET, // Use a strong secret key
-      { expiresIn: "1d" } // Token expires in 1 day
+      { 
+        user: {
+          id: user._id,
+          role: user.userType,
+          email: user.email,
+          name: user.name
+        }
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
     );
-    console.log("Generated token:", token); // Debug <<< MOST IMPORTANT
+   
 
-    // Return success response with token and user details
+    // Return success response
     res.status(200).json({
       message: "Login successful",
       token,
