@@ -7,12 +7,6 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 // Apply authentication to all routes
 donationRouter.use(authMiddleware);
 
-// Public: Get all donations (filter by ?status=Available)
-donationRouter.get("/", donationController.getAllDonations);
-
-// Public: Get donation by ID
-donationRouter.get("/:id", donationController.getDonationById);
-
 // Restaurant: Create a donation
 donationRouter.post(
   "/",
@@ -20,14 +14,21 @@ donationRouter.post(
   donationController.createDonation
 );
 
-// NGO: Claim a donation
+//Get all donations
+donationRouter.get("/", donationController.getAllDonations);
+
+
+// Get donation by ID
+donationRouter.get("/:id", donationController.getDonationById);
+
+//Claim a donation
 donationRouter.put(
   "/:id/claim",
   roleMiddleware(["ngo"]),
   donationController.claimDonation
 );
 
-// Admin: Update donation status (Approve/Reject/Deliver)
+// Admin: Update donation status
 donationRouter.put(
   "/:id/status",
   roleMiddleware(["admin"]),
@@ -37,7 +38,7 @@ donationRouter.put(
 // Admin or Donor: Delete a donation
 donationRouter.delete(
   "/:id",
-  roleMiddleware(["admin", "restaurant"]), // Middleware checks if user is donor
+  roleMiddleware(["admin", "restaurant"]), 
   donationController.deleteDonation
 );
 
