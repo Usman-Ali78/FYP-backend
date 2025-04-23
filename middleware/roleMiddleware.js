@@ -1,12 +1,3 @@
-// const roleMiddleware = (roles)=>{
-//   return (req, res, next)=>{
-//     if(!roles.includes(req.user.userType)){
-//       return res.status(403).json({message: "Access Denied, Insufiicient Permission"})
-//     }
-//     next()
-//   }
-// }
-
 const roleMiddleware = (requiredRoles) => {
   return (req, res, next) => {
     // 1. Get role from the nested 'user' object

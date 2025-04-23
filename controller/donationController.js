@@ -17,7 +17,7 @@ exports.createDonation = async (req, res) => {
     }
 
     const donation = new Donation({
-      donor: req.user.id,
+      donor: req.user.user.id,
       item,
       quantity,
       expiry_time,
@@ -133,13 +133,13 @@ exports.deleteDonation = async (req, res) => {
     if (!donation) return res.status(404).json({ message: "Donation not found" });
 
     // Allow deletion only by Admin or the donor
-    if (req.user.role !== "Admin" && donation.donor.toString() !== req.user.id) {
+    if (req.user.user.role !== "admin" && donation.donor.toString() !== req.user.user.id) { 
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    if (donation.status !== "Available" && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Only admin can delete in-progress donations" });
-    }
+    // if (donation.status !== "Available" && req.user.role !== "admin") {
+    //   return res.status(403).json({ message: "Only admin can delete in-progress donations" });
+    // }
 
     await Donation.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Donation deleted" });
