@@ -31,11 +31,11 @@ exports.signup = async (req, res) => {
     ) {
       return res.status(400).json({ message: "All fields are required." });
     }
+    
+    let passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/
 
-    if (password.length < 8) {
-      return res
-        .status(400)
-        .json({ meassage: "Password must be atleast 8 character long" });
+    if(!passwordRegex.test(password)){
+      return res.status(400).json({message:"Password must include at least one number,one uppercase,one lowercase,one number and 8 character long"})
     }
 
     // Ensure password and confirmPassword match
