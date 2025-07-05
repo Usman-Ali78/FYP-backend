@@ -7,12 +7,19 @@ const { authRouter } = require("./routes/authRouter");
 const { adminRouter } = require("./routes/adminRouter");
 const {donationRouter} = require("./routes/donationRouter");
 const userRouter = require("./routes/userRouter");
+const cors = require("cors");
 
 const app = express();
+
 
 // Middleware to parse JSON and URL-encoded data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  credentials: true               
+}));
 
 // Define API routes with prefixes
 app.use("/api/admin", adminRouter);

@@ -73,7 +73,7 @@ exports.claimDonation = async (req, res) => {
       });
     }
 
-    // 3. Validate NGO user (redundant check for security)
+    // 3. Validate NGO user
     const userRole = req.user.user?.role || req.user.role;
     if (userRole?.toLowerCase() !== 'ngo') {
       return res.status(403).json({ message: "Only NGOs can claim donations" });
