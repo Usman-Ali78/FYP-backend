@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+
 const donationSchema = new mongoose.Schema(
   {
     donor: {
@@ -8,17 +9,31 @@ const donationSchema = new mongoose.Schema(
     },
     item: {
       type: String,
-      required: true,
       trim: true,
-      minLength: 2,
-      maxLength: 100,
+      minlength: 2,
+      maxlength: 100,
+      required: true,
     },
     quantity: {
       type: Number,
-      required: true,
       min: 1,
+      required: true,
     },
-    expiry_time: {  // Critical for food safety!
+    unit: {
+      type: String,
+      enum: [
+        "kg",
+        "litre",
+        "pieces",
+        "packets",
+        "boxes",
+        "bottles",
+        "grams",
+        "other",
+      ],
+      required: true,
+    },
+    expiry_time: {
       type: Date,
       required: true,
     },
@@ -28,16 +43,19 @@ const donationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Available", "Claimed", "Delivered", "Expired"],
-      default: "Available",
+      enum: ["available", "claimed", "delivered", "expired", "pending_pickup"],
+      default: "available",
     },
-    ngo_id: {  // Track which NGO claimed it
+    ngo_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
   },
   { timestamps: true }
-)
+);
 
-module.exports = mongoose.model("Doantion", donationSchema)
+// Auto‑delete once expiry_time passes
+donationSchema.index({ expiry_time: 1 }, { expireAfterSeconds: 0 });
+
+module.exports = mongoose.model("Donation", donationSchema);

@@ -1,7 +1,5 @@
 require("dotenv").config();
 const express = require("express");
-const { ngoRouter } = require("./routes/ngoRouter");
-const { restaurantRouter } = require("./routes/restaurantRouter");
 const { mongoConnect } = require("./Database/database");
 const { authRouter } = require("./routes/authRouter");
 const { adminRouter } = require("./routes/adminRouter");
@@ -17,14 +15,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cors({
-  origin: 'http://localhost:5173', 
+  origin: true, 
   credentials: true               
 }));
 
 // Define API routes with prefixes
 app.use("/api/admin", adminRouter);
-app.use("/api/", ngoRouter);
-app.use("/api", restaurantRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/donation", donationRouter); 
 app.use("/api", userRouter); 

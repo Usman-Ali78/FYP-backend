@@ -17,6 +17,13 @@ donationRouter.post(
 //Get all donations
 donationRouter.get("/", donationController.getAllDonations);
 
+donationRouter.get(
+  "/my-total",
+  roleMiddleware(["restaurant"]),
+  donationController.getTotalDonations
+)
+
+
 
 // Get donation by ID
 donationRouter.get("/:id", donationController.getDonationById);
@@ -41,5 +48,13 @@ donationRouter.delete(
   roleMiddleware(["admin", "restaurant"]), 
   donationController.deleteDonation
 );
+
+//edit donation
+donationRouter.put(
+  "/:id/edit",
+  roleMiddleware(["restaurant"]),
+  donationController.editDonation
+);
+
 
 exports.donationRouter = donationRouter;

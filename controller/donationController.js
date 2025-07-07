@@ -1,32 +1,40 @@
 const Donation = require("../models/Donation");
+const mongoose = require("mongoose");
 
 // Create a new donation (Restaurant only)
 exports.createDonation = async (req, res) => {
   try {
-    const {item, quantity, expiry_time, pickup_address } = req.body;
-    
+    const { item, quantity, unit, expiry_time, pickup_address } = req.body;
+
     // Validation
-    if (!item || !quantity || !expiry_time || !pickup_address) {
+    if (!item || !unit || !quantity || !expiry_time || !pickup_address) {
       return res.status(400).json({ message: "All fields are required" });
     }
     if (quantity <= 0) {
       return res.status(400).json({ message: "Quantity must be positive" });
     }
     if (new Date(expiry_time) <= new Date()) {
-      return res.status(400).json({ message: "Expiry time must be in the future" });
+      return res
+        .status(400)
+        .json({ message: "Expiry time must be in the future" });
     }
 
     const donation = new Donation({
-      donor: req.user.user.id,
+      donor: req.user.id,
       item,
       quantity,
+      unit,
       expiry_time,
       pickup_address,
     });
+
     await donation.save();
+
     res.status(201).json(donation);
   } catch (error) {
-    res.status(500).json({ message: "Error creating donation", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error creating donation", error: error.message });
   }
 };
 
@@ -36,7 +44,7 @@ exports.getAllDonations = async (req, res) => {
     const { status } = req.query;
     const filter = status ? { status } : {};
     const donations = await Donation.find(filter)
-      .populate("donor", "name email")  // Show donor details
+      .populate("donor", "name email") // Show donor details
       .populate("ngo_id", "name email"); // Show NGO details if claimed
     res.status(200).json(donations);
   } catch (error) {
@@ -50,7 +58,8 @@ exports.getDonationById = async (req, res) => {
     const donation = await Donation.findById(req.params.id)
       .populate("donor", "name email")
       .populate("ngo_id", "name email");
-    if (!donation) return res.status(404).json({ message: "Donation not found" });
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
     res.status(200).json(donation);
   } catch (error) {
     res.status(500).json({ message: "Error fetching donation", error });
@@ -60,49 +69,53 @@ exports.getDonationById = async (req, res) => {
 // NGO claims a donation
 exports.claimDonation = async (req, res) => {
   try {
-    // 1. Find the donation
     const donation = await Donation.findById(req.params.id);
     if (!donation) {
       return res.status(404).json({ message: "Donation not found" });
     }
 
-    // 2. Validate donation status
-    if (donation.status !== "Available") {
-      return res.status(400).json({ 
-        message: `Donation is already ${donation.status.toLowerCase()}`
+    // Check if the donation is available
+    if (donation.status !== "available") {
+      return res.status(400).json({
+        message: `Donation is already ${donation.status.toLowerCase()}`,
       });
     }
 
-    // 3. Validate NGO user
-    const userRole = req.user.user?.role || req.user.role;
-    if (userRole?.toLowerCase() !== 'ngo') {
+    // Make sure user is NGO (middleware already enforces this)
+    const userId = req.user.user.id;
+    const userRole = req.user.user.role;
+
+    if (userRole.toLowerCase() !== "ngo") {
       return res.status(403).json({ message: "Only NGOs can claim donations" });
     }
 
-    if (donation.donor.toString() === req.user.id) {
-      return res.status(400).json({ message: "Cannot claim your own donation" });
+    // Prevent self-claiming
+    if (donation.donor.toString() === userId) {
+      return res
+        .status(400)
+        .json({ message: "Cannot claim your own donation" });
     }
 
-    // 4. Update donation
-    donation.status = "Claimed";
-    donation.ngo_id = req.user.id;
-    donation.claimedAt = new Date(); // Add timestamp
-    
-    // 5. Save and populate NGO details
+    // Claim donation
+    donation.status = "claimed";
+    donation.ngo_id = userId;
+    donation.claimedAt = new Date();
+
     await donation.save();
-    const populatedDonation = await Donation.findById(donation._id)
-      .populate('ngo_id', 'name email phone');
+    const populatedDonation = await Donation.findById(donation._id).populate(
+      "ngo_id",
+      "name email phone"
+    );
 
     res.status(200).json({
       message: "Donation claimed successfully",
-      donation: populatedDonation
+      donation: populatedDonation,
     });
-
   } catch (error) {
     console.error("Claim error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Error claiming donation",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -112,17 +125,36 @@ exports.updateDonationStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const donation = await Donation.findById(req.params.id);
-    if (!donation) return res.status(404).json({ message: "Donation not found" });
 
-    // Validate status transition (e.g., "Claimed" → "Delivered")
-    if (!["Approved", "Rejected", "Delivered"].includes(status)) {
-      return res.status(400).json({ message: "Invalid status" });
+    if (!donation) {
+      return res.status(404).json({ message: "Donation not found" });
     }
+    const statusTransitions = {
+      available: ["claimed"],
+      claimed: ["delivered", "available"], // Allow un-claiming
+      delivered: [], // Final state
+      expired: [], // Final state
+    };
+
+    // Check if transition is allowed
+    if (!statusTransitions[donation.status]?.includes(status)) {
+      return res.status(400).json({
+        message: `Cannot transition from ${donation.status} to ${status}`,
+      });
+    }
+
+    // Optional: Check user permissions (e.g., only NGO can mark as delivered)
+    if (status === "delivered" && donation.ngo_id.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
     donation.status = status;
     await donation.save();
     res.status(200).json(donation);
   } catch (error) {
-    res.status(500).json({ message: "Error updating status", error });
+    res
+      .status(500)
+      .json({ message: "Error updating status", error: error.message });
   }
 };
 
@@ -130,14 +162,18 @@ exports.updateDonationStatus = async (req, res) => {
 exports.deleteDonation = async (req, res) => {
   try {
     const donation = await Donation.findById(req.params.id);
-    if (!donation) return res.status(404).json({ message: "Donation not found" });
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
 
     // Allow deletion only by Admin or the donor
-    if (req.user.user.role !== "admin" && donation.donor.toString() !== req.user.user.id) { 
+    if (
+      req.user.user.role !== "admin" &&
+      donation.donor.toString() !== req.user.user.id
+    ) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    // if (donation.status !== "Available" && req.user.role !== "admin") {
+    // if (donation.status !== "availaible" && req.user.role !== "admin") {
     //   return res.status(403).json({ message: "Only admin can delete in-progress donations" });
     // }
 
@@ -146,4 +182,79 @@ exports.deleteDonation = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Error deleting donation", error });
   }
-}
+};
+
+exports.editDonation = async (req, res) => {
+  try {
+    const { item, quantity, unit, expiry_time, pickup_address, status } =
+      req.body;
+    const donation = await Donation.findById(req.params.id);
+
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
+
+    // Allow editing only by the donor
+    if (donation.donor.toString() !== req.user.user.id) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (donation.status === "claimed") {
+      return res
+        .status(400)
+        .json({ message: "Cannot edit a donation that is not available" });
+    }
+
+    // Update fields
+    donation.item = item || donation.item;
+    donation.quantity = quantity || donation.quantity;
+    donation.unit = unit || donation.unit;
+    donation.expiry_time = expiry_time || donation.expiry_time;
+    donation.pickup_address = pickup_address || donation.pickup_address;
+
+    await donation.save();
+    res.status(200).json(donation);
+  } catch (error) {
+    res.status(500).json({ message: "Error updating donation", error });
+  }
+};
+
+exports.getTotalDonations = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "User ID not found in token" });
+    }
+
+    const total = await Donation.countDocuments({ donor: userId });
+    const available = await Donation.countDocuments({
+      donor: userId,
+      status: "available",
+    });
+    const claimed = await Donation.countDocuments({
+      donor: userId,
+      status: "claimed",
+    });
+    const pending = await Donation.countDocuments({
+      donor: userId,
+      status: "pending_pickup",
+    });
+    const delivered = await Donation.countDocuments({
+      donor: userId,
+      status: "delivered",
+    });
+
+    return res.status(200).json({
+      total,
+      available,
+      claimed,
+      pending_pickup: pending,
+      delivered,
+    });
+  } catch (error) {
+    console.error("Error in getTotalDonations:", error);
+    return res.status(500).json({
+      message: "Error fetching total donations",
+      error: error.message,
+    });
+  }
+};
