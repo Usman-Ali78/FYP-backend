@@ -43,7 +43,7 @@ const donationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["available", "claimed", "delivered", "expired", "pending_pickup"],
+      enum: ["available", "delivered", "expired", "pending_pickup"],
       default: "available",
     },
     ngo_id: {
@@ -54,8 +54,5 @@ const donationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// Auto‑delete once expiry_time passes
-donationSchema.index({ expiry_time: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model("Donation", donationSchema);

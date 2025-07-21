@@ -23,7 +23,7 @@ app.use(cors({
 app.use("/api/admin", adminRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/donation", donationRouter); 
-app.use("/api", userRouter); 
+app.use("/api/user", userRouter); 
 
 const PORT = process.env.PORT || 3000;
 

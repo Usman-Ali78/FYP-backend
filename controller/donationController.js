@@ -1,5 +1,5 @@
 const Donation = require("../models/Donation");
-const mongoose = require("mongoose");
+const ClaimRequest = require("../models/ClaimRequest");
 
 // Create a new donation (Restaurant only)
 exports.createDonation = async (req, res) => {
@@ -41,11 +41,19 @@ exports.createDonation = async (req, res) => {
 // Get all donations (filter by status if needed)
 exports.getAllDonations = async (req, res) => {
   try {
+    // Check and mark expired donations
+    await Donation.updateMany(
+      {
+        expiry_time: { $lt: new Date() },
+        status: { $in: ["available", "pending_pickup"] },
+      },
+      { $set: { status: "expired" } }
+    );
     const { status } = req.query;
     const filter = status ? { status } : {};
     const donations = await Donation.find(filter)
-      .populate("donor", "name email") // Show donor details
-      .populate("ngo_id", "name email"); // Show NGO details if claimed
+      .populate("donor", "name email restaurant_name") // Show donor details
+      .populate("ngo_id", "name email ngo_name"); // Show NGO details if claimed
     res.status(200).json(donations);
   } catch (error) {
     res.status(500).json({ message: "Error fetching donations", error });
@@ -66,60 +74,6 @@ exports.getDonationById = async (req, res) => {
   }
 };
 
-// NGO claims a donation
-exports.claimDonation = async (req, res) => {
-  try {
-    const donation = await Donation.findById(req.params.id);
-    if (!donation) {
-      return res.status(404).json({ message: "Donation not found" });
-    }
-
-    // Check if the donation is available
-    if (donation.status !== "available") {
-      return res.status(400).json({
-        message: `Donation is already ${donation.status.toLowerCase()}`,
-      });
-    }
-
-    // Make sure user is NGO (middleware already enforces this)
-    const userId = req.user.user.id;
-    const userRole = req.user.user.role;
-
-    if (userRole.toLowerCase() !== "ngo") {
-      return res.status(403).json({ message: "Only NGOs can claim donations" });
-    }
-
-    // Prevent self-claiming
-    if (donation.donor.toString() === userId) {
-      return res
-        .status(400)
-        .json({ message: "Cannot claim your own donation" });
-    }
-
-    // Claim donation
-    donation.status = "claimed";
-    donation.ngo_id = userId;
-    donation.claimedAt = new Date();
-
-    await donation.save();
-    const populatedDonation = await Donation.findById(donation._id).populate(
-      "ngo_id",
-      "name email phone"
-    );
-
-    res.status(200).json({
-      message: "Donation claimed successfully",
-      donation: populatedDonation,
-    });
-  } catch (error) {
-    console.error("Claim error:", error);
-    res.status(500).json({
-      message: "Error claiming donation",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-};
-
 // Admin updates donation status (Approve/Deliver/Reject)
 exports.updateDonationStatus = async (req, res) => {
   try {
@@ -130,10 +84,10 @@ exports.updateDonationStatus = async (req, res) => {
       return res.status(404).json({ message: "Donation not found" });
     }
     const statusTransitions = {
-      available: ["claimed"],
-      claimed: ["delivered", "available"], // Allow un-claiming
-      delivered: [], // Final state
-      expired: [], // Final state
+      available: ["pending_pickup"],
+      pending_pickup: ["delivered", "available"],
+      delivered: [],
+      expired: [],
     };
 
     // Check if transition is allowed
@@ -167,8 +121,8 @@ exports.deleteDonation = async (req, res) => {
 
     // Allow deletion only by Admin or the donor
     if (
-      req.user.user.role !== "admin" &&
-      donation.donor.toString() !== req.user.user.id
+      req.user.role !== "admin" &&
+      donation.donor.toString() !== req.user.id
     ) {
       return res.status(403).json({ message: "Unauthorized" });
     }
@@ -194,14 +148,14 @@ exports.editDonation = async (req, res) => {
       return res.status(404).json({ message: "Donation not found" });
 
     // Allow editing only by the donor
-    if (donation.donor.toString() !== req.user.user.id) {
+    if (donation.donor.toString() !== req.user.id) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    if (donation.status === "claimed") {
+    if (donation.status !== "available") {
       return res
         .status(400)
-        .json({ message: "Cannot edit a donation that is not available" });
+        .json({ message: "Only avaialable donations can be edited" });
     }
 
     // Update fields
