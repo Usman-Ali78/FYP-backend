@@ -1,6 +1,8 @@
 const { default: mongoose } = require("mongoose");
 const ClaimRequest = require("../models/ClaimRequest");
 const Donation = require("../models/Donation");
+const Activity = require("../models/Activity");
+const User = require("../models/User");
 
 // NGO sends a claim request
 exports.createClaimRequest = async (req, res) => {
@@ -37,6 +39,17 @@ exports.createClaimRequest = async (req, res) => {
       message,
       status: "pending",
       requestedAt: new Date(),
+    });
+
+    const ngoUser = await User.findById(ngoId);
+    if(!ngoUser){
+      console.log("Ngo user doesnt exist", ngoUser)
+    }
+    const ngoName = ngoUser?.ngo_name || ngoUser?.name || "an ngo" 
+    await Activity.create({
+      user: donation.donor,
+      message: `${ngoName} requested your donation: ${donation.quantity}${donation.unit} of ${donation.item}.`,
+      relatedDonation: donation._id,
     });
 
     await claim.populate("donation ngo"); // Populate for response
@@ -219,19 +232,20 @@ exports.getMyClaims = async (req, res) => {
       .populate({
         path: "donation",
         select: "item quantity status expiry_time donor", // Added donor here
-        populate: { // Nested populate for donor info
+        populate: {
+          // Nested populate for donor info
           path: "donor",
-          select: "restaurant_name" // Only get the restaurant name
+          select: "restaurant_name", // Only get the restaurant name
         },
-        strictPopulate: false
+        strictPopulate: false,
       })
       .sort({ requestedAt: -1 });
 
     res.status(200).json(claims);
   } catch (error) {
-    res.status(500).json({ 
-      message: "Error fetching your claims", 
-      error: error.message 
+    res.status(500).json({
+      message: "Error fetching your claims",
+      error: error.message,
     });
   }
 };
@@ -255,12 +269,26 @@ exports.markDelivered = async (req, res) => {
     });
 
     if (claim) {
-      claim.status = "delivered"; 
+      claim.status = "delivered";
       await claim.save();
     }
 
-    res.status(200).json({ message: "Donation and claim marked as delivered", donation, claim });
+    const ngoUser = await User.findById(req.user.id);
+
+    await Activity.create({
+      user: donation.donor,
+      message: `${ngoUser.ngo_name} marked your donation (${donation.quantity}${donation.unit} of ${donation.item}) as delivered.`,
+      relatedDonation: donation._id,
+    });
+
+    res.status(200).json({
+      message: "Donation and claim marked as delivered",
+      donation,
+      claim,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error updating donation/claim", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error updating donation/claim", error: error.message });
   }
 };

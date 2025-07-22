@@ -1,5 +1,6 @@
 const Donation = require("../models/Donation");
 const ClaimRequest = require("../models/ClaimRequest");
+const Activity = require("../models/Activity");
 
 // Create a new donation (Restaurant only)
 exports.createDonation = async (req, res) => {
@@ -29,6 +30,12 @@ exports.createDonation = async (req, res) => {
     });
 
     await donation.save();
+
+    await Activity.create({
+      user: req.user.id,
+      message: `you added ${donation.quantity}${donation.unit} of ${donation.item} for donation`,
+      relatedDonation:donation._id
+    })
 
     res.status(201).json(donation);
   } catch (error) {
@@ -126,10 +133,6 @@ exports.deleteDonation = async (req, res) => {
     ) {
       return res.status(403).json({ message: "Unauthorized" });
     }
-
-    // if (donation.status !== "availaible" && req.user.role !== "admin") {
-    //   return res.status(403).json({ message: "Only admin can delete in-progress donations" });
-    // }
 
     await Donation.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Donation deleted" });

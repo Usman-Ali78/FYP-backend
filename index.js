@@ -6,6 +6,7 @@ const { adminRouter } = require("./routes/adminRouter");
 const {donationRouter} = require("./routes/donationRouter");
 const userRouter = require("./routes/userRouter");
 const cors = require("cors");
+const activityRouter = require("./routes/activityRouter");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/donation", donationRouter); 
 app.use("/api/user", userRouter); 
+app.use("/api/activity", activityRouter)
 
 const PORT = process.env.PORT || 3000;
 
