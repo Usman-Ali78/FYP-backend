@@ -26,18 +26,15 @@ exports.signup = async (req, res) => {
       restaurant_location,
     } = req.body;
 
-    if(!userType){
-      return res.status.json({message:"userType is required"})
+    if (!userType) {
+      return res.status(400).json({ message: "userType is required" });
     }
 
     if (userType === "admin") {
-      if(!name, !email, !password, !confirmPassword){
-        return res.status(400).json({message:"All fields are required"})
+      if (!name || !email || !password || !confirmPassword) {
+        return res.status(400).json({ message: "All fields are required" });
       }
-    }
-
-
-   else if (userType === "ngo") {
+    } else if (userType === "ngo") {
       if (!ngo_name || !registration_number || !ngo_phone || !ngo_location) {
         return res
           .status(400)
@@ -54,7 +51,7 @@ exports.signup = async (req, res) => {
           .status(400)
           .json({ message: "All Restaurant fields are required." });
       }
-    } else{
+    } else {
       return res.status(400).json({ message: "Invalid user type." });
     }
 
@@ -65,6 +62,43 @@ exports.signup = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered." });
+    }
+
+    let phoneToCheck;
+    if (userType === "ngo") {
+      phoneToCheck = ngo_phone;
+    } else if (userType === "restaurant") {
+      phoneToCheck = restaurant_phone;
+    }
+
+    if (phoneToCheck) {
+      const existingNumber = await User.findOne({
+        $or: [{ ngo_phone: phoneToCheck }, { restaurant_phone: phoneToCheck }],
+      });
+      if (existingNumber) {
+        return res.status(400).json({ message: "Phone Number already taken" });
+      }
+    }
+
+    let registrationToCheck;
+    if (userType === "ngo") {
+      registrationToCheck = registration_number;
+    } else if (userType === "restaurant") {
+      registrationToCheck = license_number;
+    }
+
+    if (registrationToCheck) {
+      const existingRegistration = await User.findOne({
+        $or: [
+          { registration_number: registrationToCheck },
+          { license_number: registrationToCheck },
+        ],
+      });
+      if (existingRegistration) {
+        return res
+          .status(400)
+          .json({ message: "Registration Number already Taken" });
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -93,8 +127,6 @@ exports.signup = async (req, res) => {
         restaurant_phone,
         restaurant_location,
       });
-    } else if(userType === "admin"){
-      Object.assign(userData)
     }
 
     // Save user

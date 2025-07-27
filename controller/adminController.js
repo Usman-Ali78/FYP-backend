@@ -64,29 +64,3 @@ exports.updateDonationStatus = async (req, res) => {
     res.status(500).json({ message: "Error updating donation status", error });
   }
 };
-
-
-// // Approve/reject donation
-// exports.updateDonationStatus = async (req, res) => {
-//   const { id } = req.params;
-//   const { status } = req.body;
-
-//   if (!["Approved", "Rejected"].includes(status)) {
-//     throw new BadRequestError("Invalid status value");
-//   }
-
-//   const donation = await Donation.findById(id)
-//     .populate("donor", "name email")
-//     .populate("ngo", "name");
-
-//   if (!donation) throw new NotFoundError("Donation not found");
-
-//   donation.status = status;
-//   await donation.save();
-
-//   res.json({ 
-//     success: true, 
-//     message: `Donation ${status.toLowerCase()}`,
-//     data: donation 
-//   });
-// };

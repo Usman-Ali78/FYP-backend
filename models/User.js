@@ -15,6 +15,9 @@ const UserSchema = new mongoose.Schema({
   license_number: { type: String, unique: true , sparse: true },
   restaurant_phone: { type: String, unique: true , sparse: true},
   restaurant_location: { type: String},
+  //resetPassword
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
 
   createdAt: { type: Date, default: Date.now },
 });

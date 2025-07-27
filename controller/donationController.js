@@ -33,9 +33,9 @@ exports.createDonation = async (req, res) => {
 
     await Activity.create({
       user: req.user.id,
-      message: `you added ${donation.quantity}${donation.unit} of ${donation.item} for donation`,
-      relatedDonation:donation._id
-    })
+      message: `you added ${donation.quantity} ${donation.unit} of ${donation.item} for donation`,
+      relatedDonation: donation._id,
+    });
 
     res.status(201).json(donation);
   } catch (error) {
@@ -48,7 +48,7 @@ exports.createDonation = async (req, res) => {
 // Get all donations (filter by status if needed)
 exports.getAllDonations = async (req, res) => {
   try {
-    // Check and mark expired donations
+    // Mark expired donations
     await Donation.updateMany(
       {
         expiry_time: { $lt: new Date() },
@@ -56,16 +56,35 @@ exports.getAllDonations = async (req, res) => {
       },
       { $set: { status: "expired" } }
     );
+
     const { status } = req.query;
-    const filter = status ? { status } : {};
+    let filter = {};
+
+    if (status) {
+      filter.status = status;
+
+      if (status === "delivered" && req.user.role === "ngo") {
+        filter.ngo_id = req.user.id;
+      }
+    }
+
+    if (req.user.role === "restaurant") {
+      console.log("Restaurant user, applying donor filter");
+      filter.donor = req.user.id;
+    }
+
     const donations = await Donation.find(filter)
-      .populate("donor", "name email restaurant_name") // Show donor details
-      .populate("ngo_id", "name email ngo_name"); // Show NGO details if claimed
+      .populate("donor", "name email restaurant_name")
+      .populate("ngo_id", "name email ngo_name")
+      .sort({ createdAt: -1 });
+
     res.status(200).json(donations);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching donations", error });
+    res.status(500).json({ message: "Error fetching donations", error: error.message });
   }
 };
+
+
 
 // Get a single donation by ID
 exports.getDonationById = async (req, res) => {

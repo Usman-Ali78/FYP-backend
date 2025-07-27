@@ -15,10 +15,10 @@ const mongoConnect = async (callback) => {
     }
 };
 
-const getDB = () => {
-    if (!db) throw new Error("❌ Database not connected!");
-    return db;
-};
+// const getDB = () => {
+//     if (!db) throw new Error("❌ Database not connected!");
+//     return db;
+// };
 
 exports.mongoConnect = mongoConnect;
-exports.getDB = getDB;
+// exports.getDB = getDB;
