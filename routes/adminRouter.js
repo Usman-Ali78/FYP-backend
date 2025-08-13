@@ -18,4 +18,8 @@ adminRouter.put("/donations/:id/status", adminController.updateDonationStatus);
 // NGO Management
 adminRouter.get("/ngos", adminController.getNgo);
 
+adminRouter.get("/claims", adminController.getAllClaims)
+adminRouter.get("/top-donors", adminController.getTopDonors)
+
+
 exports.adminRouter= adminRouter;

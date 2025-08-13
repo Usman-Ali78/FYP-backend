@@ -12,4 +12,10 @@ authRouter.post("/login", authController.login);
 // Update Password Route (Protected)
 authRouter.put("/update-password", authMiddleware, authController.updatePassword);
 
+//forgot password
+authRouter.post("/forgot-password", authController.forgotPassword);
+
+//reset password
+authRouter.post("/reset-password", authController.resetPassword);
+
 exports.authRouter = authRouter;

@@ -1,8 +1,6 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-// const Ngo = require("../models/Ngo");
-// const Restaurant = require("../models/Restaurant");
 require("dotenv").config();
 
 //SignUp
@@ -171,6 +169,12 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    if (user.blocked) {
+      return res
+        .status(403)
+        .json({ message: "You account is blocked by admin" });
+    }
+
     // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -247,5 +251,75 @@ exports.updatePassword = async (req, res) => {
     res.status(200).json({ message: "Password updated successfully." });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+// Forgot Password - Validate Phone and Allow Frontend to Proceed
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { ngo_phone, restaurant_phone } = req.body;
+
+    if (!ngo_phone && !restaurant_phone) {
+      return res.status(400).json({ message: "Phone number is required" });
+    }
+
+    // Build dynamic $or query
+    const query = {
+      $or: [],
+    };
+
+    if (ngo_phone) query.$or.push({ ngo_phone });
+    if (restaurant_phone) query.$or.push({ restaurant_phone });
+
+    const foundUser = await User.findOne(query);
+
+    if (!foundUser) {
+      return res
+        .status(404)
+        .json({ message: "No user found with this phone number" });
+    }
+
+    res.status(200).json({
+      message: "Phone number verified. Proceed to reset password.",
+      userId: foundUser._id,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error processing forgot password request",
+      error: error.message,
+    });
+  }
+};
+
+// Reset Password - After Phone is Verified
+exports.resetPassword = async (req, res) => {
+  try {
+    const { userId, newPassword, confirmPassword } = req.body;
+    console.log("Received body:", req.body);
+
+    if (!userId || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error resetting password",
+      error: error.message,
+    });
   }
 };
