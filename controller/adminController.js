@@ -5,7 +5,7 @@ const ClaimRequest = require("../models/ClaimRequest")
 // Get all NGOs (for Admin)
 exports.getNgo = async (req, res) => {
   try {
-    const ngos = await User.find({ role: "ngo" });
+    const ngos = await User.find({ userType: "ngo" });
     res.status(200).json(ngos);
   } catch (error) {
     res.status(500).json({ message: "Error fetching NGOs", error });

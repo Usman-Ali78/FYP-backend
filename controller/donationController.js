@@ -1,6 +1,7 @@
 const Donation = require("../models/Donation");
 const ClaimRequest = require("../models/ClaimRequest");
 const Activity = require("../models/Activity");
+const User = require("../models/User");
 
 // Create a new donation (Restaurant only)
 exports.createDonation = async (req, res) => {
@@ -232,5 +233,16 @@ exports.getTotalDonations = async (req, res) => {
       message: "Error fetching total donations",
       error: error.message,
     });
+  }
+};
+
+
+//get all ngo
+exports.getAllNgo = async (req, res) => {
+  try {
+    const ngos = await User.find({ userType: "ngo" });
+    res.status(200).json(ngos);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching NGOs", error });
   }
 };

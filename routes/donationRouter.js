@@ -5,8 +5,15 @@ const claimRequestController = require("../controller/claimRequestController");
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
+//get all ngo
+donationRouter.get(
+  "/main-ngo",
+  donationController.getAllNgo
+);
+
 // Apply authentication to all routes
 donationRouter.use(authMiddleware);
+
 
 // Restaurant: Create a donation
 donationRouter.post(

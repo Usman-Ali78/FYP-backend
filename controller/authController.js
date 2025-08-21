@@ -172,7 +172,7 @@ exports.login = async (req, res) => {
     if (user.blocked) {
       return res
         .status(403)
-        .json({ message: "You account is blocked by admin" });
+        .json({ message: "You account is blocked by admim" });
     }
 
     // Compare passwords
